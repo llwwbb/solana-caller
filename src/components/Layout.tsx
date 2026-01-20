@@ -15,8 +15,6 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-type Tab = 'transaction' | 'account';
-
 export function Layout({
   rpcUrl,
   onRpcUrlChange,

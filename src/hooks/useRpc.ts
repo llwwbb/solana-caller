@@ -98,14 +98,14 @@ export function useRpc({
         const accountKeys: string[] = [];
 
         // 静态账户
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const msg = message as any;
         if ('staticAccountKeys' in message) {
-          accountKeys.push(
-            ...message.staticAccountKeys.map((k) => k.toBase58())
-          );
+          const staticKeys = msg.staticAccountKeys as PublicKey[];
+          accountKeys.push(...staticKeys.map((k: PublicKey) => k.toBase58()));
         } else if ('accountKeys' in message) {
-          accountKeys.push(
-            ...(message.accountKeys as PublicKey[]).map((k) => k.toBase58())
-          );
+          const keys = msg.accountKeys as PublicKey[];
+          accountKeys.push(...keys.map((k: PublicKey) => k.toBase58()));
         }
 
         // 地址查找表账户（v0 交易）
@@ -186,7 +186,7 @@ export function useRpc({
         const result: ParsedTransaction = {
           signature,
           slot: tx.slot,
-          blockTime: tx.blockTime,
+          blockTime: tx.blockTime ?? null,
           success: tx.meta?.err === null,
           fee: tx.meta?.fee || 0,
           instructions,
@@ -242,7 +242,7 @@ export function useRpc({
           owner,
           lamports: accountInfo.lamports,
           executable: accountInfo.executable,
-          rentEpoch: Number(accountInfo.rentEpoch),
+          rentEpoch: accountInfo.rentEpoch !== undefined ? Number(accountInfo.rentEpoch) : null,
           dataSize: accountInfo.data.length,
           accountType,
           parsedData: parsedData

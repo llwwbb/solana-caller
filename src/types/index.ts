@@ -76,7 +76,7 @@ export interface TokenBalance {
     amount: string;
     decimals: number;
     uiAmount: number | null;
-    uiAmountString: string;
+    uiAmountString?: string;
   };
 }
 
@@ -112,7 +112,7 @@ export interface ParsedAccountData {
   owner: string;
   lamports: number;
   executable: boolean;
-  rentEpoch: number;
+  rentEpoch: number | null;
   dataSize: number;
   accountType: string | null;
   parsedData: Record<string, unknown> | null;

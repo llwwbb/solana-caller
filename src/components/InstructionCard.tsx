@@ -134,7 +134,7 @@ function JsonValue({
       
       {expanded && (
         <div className="ml-4 border-l border-gray-600 pl-2">
-          {entries.map(([key, val], i) => (
+          {entries.map(([key, val]) => (
             <JsonValue
               key={key}
               label={isArray ? key : key}
