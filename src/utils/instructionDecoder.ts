@@ -1,5 +1,6 @@
 import { BorshCoder, BN } from '@coral-xyz/anchor';
 import type { Idl } from '@coral-xyz/anchor';
+import { PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import type {
   IdlConfig,
@@ -224,7 +225,27 @@ export function parseInstruction(
 }
 
 /**
- * 将 BigInt 和 BN 转换为可序列化格式
+ * 检测对象是否是 PublicKey 类型（包括 duck-typed）
+ */
+function isPublicKeyLike(obj: unknown): obj is PublicKey {
+  if (obj instanceof PublicKey) {
+    return true;
+  }
+  // Duck-type 检测：有 _bn 属性且有 toBase58 方法
+  if (
+    obj &&
+    typeof obj === 'object' &&
+    '_bn' in obj &&
+    'toBase58' in obj &&
+    typeof (obj as { toBase58: unknown }).toBase58 === 'function'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 将 BigInt、BN 和 PublicKey 转换为可序列化格式
  */
 export function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
@@ -233,6 +254,25 @@ export function serializeBigInt(obj: unknown): unknown {
   
   if (typeof obj === 'bigint') {
     return obj.toString();
+  }
+  
+  // 处理 PublicKey 对象 - 转换为 base58 字符串
+  if (isPublicKeyLike(obj)) {
+    try {
+      return obj.toBase58();
+    } catch {
+      // 如果 toBase58 失败，尝试从 _bn 构建
+      const bnValue = (obj as { _bn?: BN })._bn;
+      if (bnValue instanceof BN) {
+        try {
+          // 将 BN 转为 32 字节的 buffer，再转 base58
+          const bytes = bnValue.toArrayLike(Buffer, 'le', 32);
+          return bs58.encode(bytes);
+        } catch {
+          return bnValue.toString();
+        }
+      }
+    }
   }
   
   // 处理 BN (Big Number) 对象
@@ -245,6 +285,22 @@ export function serializeBigInt(obj: unknown): unknown {
   }
   
   if (typeof obj === 'object') {
+    // 检测可能是 PublicKey 但没有 toBase58 方法的对象（纯 JSON 结构）
+    const objRecord = obj as Record<string, unknown>;
+    if (
+      '_bn' in objRecord &&
+      Object.keys(objRecord).length === 1 &&
+      objRecord._bn instanceof BN
+    ) {
+      // 这是一个只有 _bn 属性的对象，很可能是 PublicKey 的内部结构
+      try {
+        const bytes = (objRecord._bn as BN).toArrayLike(Buffer, 'le', 32);
+        return bs58.encode(bytes);
+      } catch {
+        return (objRecord._bn as BN).toString();
+      }
+    }
+    
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = serializeBigInt(value);
