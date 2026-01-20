@@ -3,6 +3,7 @@ import type { IdlConfig, AddressLabel } from '../types';
 import { RpcConfig } from './RpcConfig';
 import { IdlManager } from './IdlManager';
 import { AddressLabels } from './AddressLabels';
+import { ConfigImportExport } from './ConfigImportExport';
 
 interface LayoutProps {
   rpcUrl: string;
@@ -171,8 +172,18 @@ export function Layout({
           </div>
 
           {/* 侧边栏底部 */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-            <div>数据存储于本地 localStorage</div>
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 space-y-3">
+            <ConfigImportExport
+              rpcUrl={rpcUrl}
+              onRpcUrlChange={onRpcUrlChange}
+              idlConfigs={idlConfigs}
+              onIdlConfigsChange={onIdlConfigsChange}
+              addressLabels={addressLabels}
+              onAddressLabelsChange={onAddressLabelsChange}
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              数据存储于本地 localStorage
+            </div>
           </div>
         </div>
       </aside>
