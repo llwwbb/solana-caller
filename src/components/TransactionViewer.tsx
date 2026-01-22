@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { ParsedTransaction, AddressLabel, IdlConfig, TokenAccountMarkers, AddressColorMap } from '../types';
 import { InstructionCard } from './InstructionCard';
+import { EventCard } from './EventCard';
 import { AddressDisplay } from './AddressDisplay';
 
 interface TransactionViewerProps {
@@ -546,6 +547,29 @@ export function TransactionViewer({
               })}
             </div>
           </div>
+
+          {/* 事件列表 */}
+          {transaction.events && transaction.events.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                事件 ({transaction.events.length})
+              </h3>
+              <div className="space-y-2">
+                {transaction.events.map((event, index) => (
+                  <EventCard
+                    key={index}
+                    event={event}
+                    index={index}
+                    addressLabels={addressLabels}
+                    onAddLabel={onAddLabel}
+                    addressColors={addressColors}
+                    onSetAddressColor={handleSetAddressColor}
+                    idlConfigs={idlConfigs}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 日志 */}
           {transaction.logs.length > 0 && (

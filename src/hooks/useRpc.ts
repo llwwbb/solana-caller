@@ -13,6 +13,7 @@ import {
   parseInstruction,
   decodeAccountData,
   serializeBigInt,
+  parseEventsFromLogs,
 } from '../utils/instructionDecoder';
 
 interface UseRpcOptions {
@@ -134,6 +135,7 @@ export function useRpc({
 
         // 解析内部指令
         // innerInstructions 的 data 已经是 base58 字符串
+        // 对于内部指令，尝试解析为 CPI 事件
         const innerInstructions: DecodedInnerInstruction[] = [];
         if (tx.meta?.innerInstructions) {
           for (const inner of tx.meta.innerInstructions) {
@@ -142,13 +144,15 @@ export function useRpc({
               instructions: inner.instructions.map((ix) => {
                 const programId = accountKeys[ix.programIdIndex];
                 // ix.data 已经是 base58 字符串，直接使用
+                // 传入 tryParseAsEvent: true 以尝试解析为 CPI 事件
                 return parseInstruction(
                   programId,
                   ix.data as string,
                   accountKeys,
                   ix.accounts,
                   idlConfigsRef.current,
-                  addressLabelsRef.current
+                  addressLabelsRef.current,
+                  true // tryParseAsEvent
                 );
               }),
             };
@@ -183,6 +187,10 @@ export function useRpc({
           },
         }));
 
+        // 从日志中解析事件（CPI 事件已在内部指令解析时处理）
+        const logMessages = tx.meta?.logMessages || [];
+        const events = parseEventsFromLogs(logMessages, idlConfigsRef.current);
+
         const result: ParsedTransaction = {
           signature,
           slot: tx.slot,
@@ -191,7 +199,8 @@ export function useRpc({
           fee: tx.meta?.fee || 0,
           instructions,
           innerInstructions,
-          logs: tx.meta?.logMessages || [],
+          events,
+          logs: logMessages,
           preBalances: tx.meta?.preBalances || [],
           postBalances: tx.meta?.postBalances || [],
           preTokenBalances,

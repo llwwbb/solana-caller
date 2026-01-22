@@ -49,6 +49,7 @@ export interface DecodedInstruction {
   rawData?: string;
   decodeError?: string;  // 解析失败的原因
   hasIdl?: boolean;      // 是否有对应的 IDL
+  isEvent?: boolean;     // 是否是 CPI 事件
 }
 
 // 解析后的账户
@@ -64,6 +65,17 @@ export interface DecodedAccount {
 export interface DecodedInnerInstruction {
   index: number;
   instructions: DecodedInstruction[];
+}
+
+// 解析后的 Event
+export interface DecodedEvent {
+  programId: string;
+  name: string | null;
+  data: Record<string, unknown> | null;
+  rawData: string;          // base64/base58 编码的原始数据
+  decodeError?: string;     // 解析失败的原因
+  instructionIndex?: number; // 关联的指令索引
+  isCpi?: boolean;          // 是否是 CPI 事件（通过 inner instruction 触发）
 }
 
 // Token 余额信息
@@ -96,6 +108,7 @@ export interface ParsedTransaction {
   fee: number;
   instructions: DecodedInstruction[];
   innerInstructions: DecodedInnerInstruction[];
+  events: DecodedEvent[];  // 解析后的事件
   logs: string[];
   // 余额变化
   preBalances: number[];

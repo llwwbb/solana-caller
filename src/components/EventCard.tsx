@@ -1,20 +1,15 @@
 import { useState } from 'react';
-import type { DecodedInstruction, AddressLabel, TokenAccountMarkers, AddressColorMap, IdlConfig } from '../types';
+import type { DecodedEvent, AddressLabel, AddressColorMap, IdlConfig } from '../types';
 import { getKnownProgramName, getAddressLabel } from '../utils/addressResolver';
 import { AddressDisplay } from './AddressDisplay';
 
-interface InstructionCardProps {
-  instruction: DecodedInstruction;
+interface EventCardProps {
+  event: DecodedEvent;
   index: number;
   addressLabels: AddressLabel[];
   onAddLabel?: (address: string, label: string) => void;
-  isInner?: boolean;
-  innerIndex?: number;
-  tokenMarkers?: TokenAccountMarkers;
-  // 颜色高亮相关
   addressColors?: AddressColorMap;
   onSetAddressColor?: (address: string, color: string | null) => void;
-  // IDL 配置（用于自动标签）
   idlConfigs?: IdlConfig[];
 }
 
@@ -51,7 +46,6 @@ function JsonValue({
   // 获取预览文本
   const getPreview = (val: unknown): string => {
     if (Array.isArray(val)) {
-      // 检查是否是字节数组
       if (val.every((v) => typeof v === 'number' && v >= 0 && v <= 255)) {
         return `[bytes: ${val.length}]`;
       }
@@ -95,7 +89,6 @@ function JsonValue({
     return <span>{String(val)}</span>;
   };
 
-  // 如果不是可展开的类型，直接渲染值
   if (!isExpandable(value)) {
     return (
       <div className="flex items-start gap-2">
@@ -154,60 +147,32 @@ function JsonValue({
   );
 }
 
-export function InstructionCard({
-  instruction,
+export function EventCard({
+  event,
   index,
   addressLabels,
   onAddLabel,
-  isInner = false,
-  innerIndex,
-  tokenMarkers,
   addressColors,
   onSetAddressColor,
   idlConfigs,
-}: InstructionCardProps) {
-  const [expanded, setExpanded] = useState(!isInner);
+}: EventCardProps) {
+  const [expanded, setExpanded] = useState(true);
   const [showRawData, setShowRawData] = useState(false);
-  const [showAllAccounts, setShowAllAccounts] = useState(false);
 
-  // 优先级: 用户自定义标签 > IDL programId 标签 > 已知程序名称
-  const resolvedLabel = getAddressLabel(instruction.programId, addressLabels, idlConfigs);
-  const knownName = getKnownProgramName(instruction.programId);
+  // 获取程序标签
+  const resolvedLabel = getAddressLabel(event.programId, addressLabels, idlConfigs);
+  const knownName = getKnownProgramName(event.programId);
   const programLabel = resolvedLabel || knownName;
 
-  // 账户显示数量限制
-  const ACCOUNT_DISPLAY_LIMIT = 5;
-  const hasMoreAccounts = instruction.accounts.length > ACCOUNT_DISPLAY_LIMIT;
-  const displayedAccounts = showAllAccounts
-    ? instruction.accounts
-    : instruction.accounts.slice(0, ACCOUNT_DISPLAY_LIMIT);
-
-  // 确定卡片样式（事件使用紫色主题）
-  const isEvent = instruction.isEvent;
-  
   return (
-    <div
-      className={`border rounded-lg overflow-hidden ${
-        isEvent
-          ? 'border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20'
-          : isInner
-          ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
-          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
-      }`}
-    >
+    <div className="border rounded-lg overflow-hidden border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20">
       {/* Header */}
       <div
-        className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
-          isEvent
-            ? 'bg-purple-100 dark:bg-purple-800/30 hover:bg-purple-200 dark:hover:bg-purple-800/50'
-            : isInner 
-            ? 'bg-gray-100 dark:bg-gray-700/30 hover:bg-gray-50 dark:hover:bg-gray-700/50' 
-            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-        }`}
+        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-800/30 bg-purple-100 dark:bg-purple-800/20"
         onClick={() => setExpanded(!expanded)}
       >
         <svg
-          className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${
+          className={`w-4 h-4 text-purple-500 transition-transform flex-shrink-0 ${
             expanded ? 'rotate-90' : ''
           }`}
           fill="none"
@@ -217,40 +182,40 @@ export function InstructionCard({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
 
-        <span className="text-xs text-gray-500 font-mono flex-shrink-0">
-          {isInner ? `${index}.${innerIndex}` : `#${index}`}
+        <span className="text-xs text-purple-500 font-mono flex-shrink-0">
+          Event #{index}
         </span>
 
-        {instruction.isEvent && (
-          <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded flex-shrink-0">
-            EVENT
+        {event.isCpi && (
+          <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 rounded flex-shrink-0">
+            CPI
           </span>
         )}
 
-        {instruction.name && (
-          <span className={`px-2 py-0.5 text-xs font-medium rounded flex-shrink-0 ${
-            instruction.isEvent 
-              ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
-              : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-          }`}>
-            {instruction.name}
+        {event.name ? (
+          <span className="px-2 py-0.5 text-xs font-medium bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded flex-shrink-0">
+            {event.name}
           </span>
-        )}
-
-        <span className="text-xs text-gray-600 dark:text-gray-400 truncate" title={instruction.programId}>
-          {programLabel || `${instruction.programId.slice(0, 8)}...`}
-        </span>
-
-        {!instruction.data && !instruction.name && (
+        ) : (
           <span className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded flex-shrink-0">
-            未解析
+            未知事件
+          </span>
+        )}
+
+        <span className="text-xs text-gray-600 dark:text-gray-400 truncate" title={event.programId}>
+          {programLabel || `${event.programId.slice(0, 8)}...`}
+        </span>
+
+        {event.instructionIndex !== undefined && (
+          <span className="text-xs text-gray-400 flex-shrink-0">
+            (指令 #{event.instructionIndex})
           </span>
         )}
       </div>
 
       {/* Body */}
       {expanded && (
-        <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+        <div className="px-3 py-2 border-t border-purple-200 dark:border-purple-700 space-y-3">
           {/* Program ID */}
           <div>
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -258,7 +223,7 @@ export function InstructionCard({
             </div>
             <div className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1.5 rounded">
               <AddressDisplay
-                address={instruction.programId}
+                address={event.programId}
                 addressLabels={addressLabels}
                 onAddLabel={onAddLabel}
                 showFull={true}
@@ -269,91 +234,15 @@ export function InstructionCard({
             </div>
           </div>
 
-          {/* Accounts */}
-          {instruction.accounts.length > 0 && (
+          {/* Event Data */}
+          {event.data && (
             <div>
               <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Accounts ({instruction.accounts.length})
-              </div>
-              <div className="space-y-1">
-                {displayedAccounts.map((acc, i) => {
-                  const isMint = tokenMarkers?.mints.has(acc.pubkey);
-                  const isTokenAccount = tokenMarkers?.tokenAccounts.has(acc.pubkey);
-                  
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2 text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1.5 rounded"
-                    >
-                      <span className="text-gray-400 w-6 flex-shrink-0">#{i}</span>
-                      {acc.name && (
-                        <span className="text-blue-600 dark:text-blue-400 font-medium flex-shrink-0 max-w-[120px] truncate" title={acc.name}>
-                          {acc.name}
-                        </span>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <AddressDisplay
-                          address={acc.pubkey}
-                          label={acc.label}
-                          addressLabels={addressLabels}
-                          onAddLabel={onAddLabel}
-                          showFull={true}
-                          addressColors={addressColors}
-                          onSetAddressColor={onSetAddressColor}
-                          idlConfigs={idlConfigs}
-                        />
-                      </div>
-                      {isMint && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 rounded flex-shrink-0">
-                          MINT
-                        </span>
-                      )}
-                      {isTokenAccount && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded flex-shrink-0">
-                          TOKEN
-                        </span>
-                      )}
-                      {acc.isSigner && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 rounded flex-shrink-0">
-                          SIGNER
-                        </span>
-                      )}
-                      {acc.isWritable && (
-                        <span className="px-1.5 py-0.5 text-[10px] bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded flex-shrink-0">
-                          WRITABLE
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-                
-                {/* 展开更多账户按钮 */}
-                {hasMoreAccounts && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAllAccounts(!showAllAccounts);
-                    }}
-                    className="w-full py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                  >
-                    {showAllAccounts
-                      ? '收起'
-                      : `Show more (${instruction.accounts.length - ACCOUNT_DISPLAY_LIMIT} more)`}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Instruction Data */}
-          {instruction.data && (
-            <div>
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Instruction Data
+                Event Data
               </div>
               <div className="text-xs bg-gray-900 text-gray-100 p-3 rounded max-h-64 overflow-y-auto font-mono">
                 <JsonValue
-                  value={instruction.data}
+                  value={event.data}
                   addressLabels={addressLabels}
                   onAddLabel={onAddLabel}
                   defaultExpanded={true}
@@ -366,7 +255,7 @@ export function InstructionCard({
           )}
 
           {/* 解析失败提示 */}
-          {!instruction.data && instruction.decodeError && (
+          {!event.data && event.decodeError && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
               <div className="flex items-start gap-2">
                 <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,40 +263,40 @@ export function InstructionCard({
                 </svg>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
-                    指令解析失败
+                    事件解析失败
                   </div>
                   <pre className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 whitespace-pre-wrap font-mono">
-                    {instruction.decodeError}
+                    {event.decodeError}
                   </pre>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 无 IDL 提示 */}
-          {!instruction.data && !instruction.decodeError && !instruction.hasIdl && (
+          {/* 无解析数据且无错误 - 表示没有 IDL */}
+          {!event.data && !event.decodeError && (
             <div className="p-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                未配置该 Program 的 IDL，无法解析指令数据
+                未配置该 Program 的 IDL，无法解析事件数据
               </div>
             </div>
           )}
 
           {/* Raw Data */}
-          {instruction.rawData && (
+          {event.rawData && (
             <div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowRawData(!showRawData);
                 }}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
               >
-                {showRawData ? 'Hide Raw Data' : 'Show Raw Data'}
+                {showRawData ? 'Hide Raw Data' : 'Show Raw Data (Base64)'}
               </button>
               {showRawData && (
                 <div className="mt-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1.5 rounded break-all max-h-32 overflow-y-auto">
-                  {instruction.rawData}
+                  {event.rawData}
                 </div>
               )}
             </div>
